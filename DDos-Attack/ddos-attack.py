@@ -103,7 +103,7 @@ except KeyboardInterrupt:
 
 finally:
     # Send notification to Discord webhook
-    webhook_url = 'https://discord.com/api/webhooks/1301588234014298247/tWlqAIdYEaX1UhQaWxqHBNlY3bPFMnUROgBYoWwHMeiMtylgp_Rt_YQFUaukPdjGRNX3'  # Replace with your Discord webhook URL
+    webhook_url = 'YOUR_WEBHOOK_URL'  # Replace with your Discord webhook URL
     message = {
         "content": (
             f"Attack completed!\n"
